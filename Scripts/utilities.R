@@ -1,19 +1,17 @@
-# All functions used to munge and compile INE demographic projection files
-
-#' Create all year-quarters between the start and end date.
+#' This functions reads in all population datasets from a specified folder
 #'
-#' @param filename the path to the .xlsx file containing INE provincial demographic projections
-#' @param tab the sheetname for an annual demographic projection
+#' @param filename province files 
+#' @param input_tabs tabs in the file to be read
 #'
-#' @return a dataframe with compiled district population estimates
+#' @return a dataset of all files and tabs
 #' @export
 #'
 #' @examples
 
-extract_demproj <- function(filename, tab) {
+extract_demproj <- function(filename, input_tabs) {
   
   df <- readxl::read_excel(path = filename,
-                           sheet = tab,
+                           sheet = input_tabs,
                            skip = 87,
                            col_names = FALSE) %>% 
     
@@ -38,7 +36,7 @@ extract_demproj <- function(filename, tab) {
     dplyr::filter(!stringr::str_detect(age, pattern = "Idade|Total|Quadro")) %>% 
     
     dplyr::mutate(district = stringr::str_extract(district, "(?<=idade\\.).*"),
-                  year = tab,
+                  year = input_tabs,
                   district = stringr::str_extract(district, "^.*(?=,)")) %>% 
     
     dplyr::relocate(tidyselect::any_of(c("district", "year")), .before = everything())
@@ -48,15 +46,12 @@ extract_demproj <- function(filename, tab) {
 }
 
 
-
-# All functions used to tidy INE demographic projection files
-
-#' Create all year-quarters between the start and end date.
+#' This function cleans population data
 #'
-#' @param df dataframe of INE population projections after munging via `extract_demproj`
-#' @param output_type defines the language of variables
+#' @param df a population dataset
+#' @param output_type 
 #'
-#' @return a tidy dataframe with cleaned population estimates
+#' @return a cleaned dataset
 #' @export
 #'
 #' @examples
@@ -77,7 +72,7 @@ clean_demproj <- function(df, output_type = "MISAU") {
            age = if_else(age == "80+", "80", age),
            age = as.numeric(age),
            value = as.numeric(value),
-           value = replace_na(value, 0)) %>%   #NEW - trim all districts
+           value = replace_na(value, 0)) %>%   
     
     left_join(map_psnu, by = "district") %>% 
     select(!district)
