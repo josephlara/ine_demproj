@@ -10,7 +10,7 @@ load_secrets()
 
 # FUNCTION ----------------------------------------------------------------
 
-extract_demproj <- function(filename, tab) {
+# extract_demproj <- function(filename, tab) {
   
   df <- read_excel(path = filename,
                    sheet = tab,
@@ -41,6 +41,38 @@ extract_demproj <- function(filename, tab) {
   
 }
 
+extract_demproj <- function(filename, tab) {
+  
+  df <- read_excel(path = filename,
+                   sheet = tab,
+                   skip = 87,
+                   col_names = FALSE) %>% 
+    rename(
+      age = `...1`,
+      total_total = `...2`,
+      total_male = `...3`,
+      total_female = `...4`,
+      urban_total = `...5`,
+      urban_male = `...6`,
+      urban_female = `...7`,
+      rural_total = `...8`,
+      rural_male = `...9`,
+      rural_female = `...10`
+    ) %>%
+    mutate(district = case_when(str_detect(age, pattern = "idade.") ~ age,
+                                TRUE ~ NA_character_)) %>% 
+    fill(district, .direction = "down") %>% 
+    filter(!str_detect(age, pattern = "Idade|Total|Quadro")) %>% 
+    mutate(district = str_extract(district, "(?<=idade\\.).*")) %>% 
+    mutate(year = tab) %>% 
+    mutate(district = str_extract(district, "^.*(?=,)")) %>% 
+    relocate(any_of(c("district", "year")), .before = everything())
+  
+  return(df)
+  
+}
+
+
 # PATHS & LISTS -------------------------------------------------------------------
 
 path_nampula <- "Data/nampula.xlsx"
@@ -52,8 +84,8 @@ path_gaza <- "Data/gaza.xlsx"
 path_zambezia <- "Data/zambezia.xlsx"
 path_cabo_delgado <- "Data/cabo_delgado.xlsx"
 path_inhambane <- "Data/inhambane.xlsx"
-path_maputo_cidade <- "Data/maputo_cidade.xlsx"
 path_maputo_province <- "Data/maputo_province.xlsx"
+path_maputo_cidade <- "Data/maputo_cidade.xlsx"
 
 excel_tabs <- as.character(c(2017:2050))
 
@@ -96,6 +128,7 @@ df_maputo_cidade <- map_dfr(.x = c(excel_tabs),
 
 # COMPILE -----------------------------------------------------------------
 
+
 df_compile <- bind_rows(df_cabo_delgado, 
                         df_gaza, 
                         df_inhambane, 
@@ -110,6 +143,17 @@ df_compile <- bind_rows(df_cabo_delgado,
   pivot_longer(cols = total_total:rural_female, names_to = c("urban_rural", "sex"), names_sep = "_", values_to = "value") %>% 
   filter(!urban_rural == "total",
          !sex == "total") %>% 
+  mutate(district = str_trim(district)) %>%   #NEW - trim all districts
+  left_join(map_psnu, by = "district") %>% 
+  relocate(any_of(c("snu", "psnu", "snuuid", "psnuuid")), .before = everything()) %>% 
+  select(!district)
+
+
+df_compile <- df_maputo_cidade %>% 
+  pivot_longer(cols = total_total:rural_female, names_to = c("urban_rural", "sex"), names_sep = "_", values_to = "value") %>% 
+  filter(!urban_rural == "total",
+         !sex == "total") %>% 
+  mutate(district = str_trim(district)) %>%   #NEW - trim all districts
   left_join(map_psnu, by = "district") %>% 
   relocate(any_of(c("snu", "psnu", "snuuid", "psnuuid")), .before = everything()) %>% 
   select(!district)
