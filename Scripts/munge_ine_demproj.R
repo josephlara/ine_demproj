@@ -20,7 +20,7 @@ load_secrets()
 # GLOBAL VARIABLES --------------------------------------------------------
 
 INPUT_FOLDER <- "Data/population"
-INPUT_TABS <- c(as.character(c(2017:2050)))
+INPUT_TABS <- c(as.character(c(2023:2050)))
 
 # FUNCTIONS-------------------------------------------------------------------
 
